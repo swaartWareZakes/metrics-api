@@ -40,15 +40,17 @@ jobs:
       # 🏷️ Setup image tag
       - name: Set up Docker tag
         id: meta
+        env:
+          VERSION: ${{ steps.version.outputs.VERSION }}
         run: |
           IMAGE=swaartwarezakes/metrics-api
           if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
             TAG=${GITHUB_REF#refs/tags/}
-          elif [[ "${GITHUB_REF}" == refs/heads/main" ]]; then
-            TAG=${{ steps.version.outputs.VERSION }}
-          elif [[ "${GITHUB_REF}" == refs/heads/dev ]]; then
+          elif [[ "${GITHUB_REF}" == "refs/heads/main" ]]; then
+            TAG=$VERSION
+          elif [[ "${GITHUB_REF}" == "refs/heads/dev" ]]; then
             TAG=dev
-          elif [[ "${GITHUB_REF}" == refs/heads/staging ]]; then
+          elif [[ "${GITHUB_REF}" == "refs/heads/staging" ]]; then
             TAG=staging
           else
             TAG=$(echo "${GITHUB_REF#refs/heads/}" | tr '/' '-')
