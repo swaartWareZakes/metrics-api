@@ -13,7 +13,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-Console.WriteLine("✅ Metrics API has started.");
+Console.WriteLine("🚀 Hello from GitHub Actions!");
 
 
 // app.UseHttpsRedirection();
