@@ -40,14 +40,13 @@ jobs:
       # 🏷️ Setup image tag
       - name: Set up Docker tag
         id: meta
-        env:
-          VERSION: ${{ steps.version.outputs.VERSION }}
         run: |
           IMAGE=swaartwarezakes/metrics-api
+
           if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
             TAG=${GITHUB_REF#refs/tags/}
           elif [[ "${GITHUB_REF}" == "refs/heads/main" ]]; then
-            TAG=$VERSION
+            TAG=${{ steps.version.outputs.VERSION }}
           elif [[ "${GITHUB_REF}" == "refs/heads/dev" ]]; then
             TAG=dev
           elif [[ "${GITHUB_REF}" == "refs/heads/staging" ]]; then
@@ -55,14 +54,25 @@ jobs:
           else
             TAG=$(echo "${GITHUB_REF#refs/heads/}" | tr '/' '-')
           fi
+
           echo "TAG=$TAG" >> $GITHUB_OUTPUT
           echo "IMAGE=$IMAGE" >> $GITHUB_OUTPUT
 
+      # 🔐 Login to Docker Hub
       - name: Log in to Docker Hub
         run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
+      # 🛠️ Build the Docker image
       - name: Build Docker image
         run: docker build -t ${{ steps.meta.outputs.IMAGE }}:${{ steps.meta.outputs.TAG }} .
 
+      # 🚀 Push the Docker image
       - name: Push Docker image
         run: docker push ${{ steps.meta.outputs.IMAGE }}:${{ steps.meta.outputs.TAG }}
+
+      # 🏷️ (Optional) Push 'latest' tag for main
+      - name: Tag and push as latest (main only)
+        if: github.ref == 'refs/heads/main'
+        run: |
+          docker tag ${{ steps.meta.outputs.IMAGE }}:${{ steps.version.outputs.VERSION }} ${{ steps.meta.outputs.IMAGE }}:latest
+          docker push ${{ steps.meta.outputs.IMAGE }}:latest
