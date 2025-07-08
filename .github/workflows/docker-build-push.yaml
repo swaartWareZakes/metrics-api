@@ -17,6 +17,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v3
 
+      # 🔁 Copy correct version file per branch
       - name: Use environment-specific version.json
         run: |
           if [[ "${GITHUB_REF}" == "refs/heads/dev" ]]; then
@@ -27,6 +28,7 @@ jobs:
             echo "Using default version.json"
           fi
 
+      # 📖 Read version and environment values
       - name: Read version and environment from version.json
         id: version
         run: |
@@ -35,21 +37,21 @@ jobs:
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
           echo "ENVIRONMENT=$ENVIRONMENT" >> $GITHUB_OUTPUT
 
+      # 🏷️ Setup image tag
       - name: Set up Docker tag
         id: meta
         run: |
           IMAGE=swaartwarezakes/metrics-api
-          REF="${GITHUB_REF}"
-          if [[ "$REF" == refs/tags/* ]]; then
-            TAG="${REF#refs/tags/}"
-          elif [[ "$REF" == refs/heads/main ]]; then
-            TAG="${{ steps.version.outputs.VERSION }}"
-          elif [[ "$REF" == refs/heads/dev ]]; then
-            TAG="dev"
-          elif [[ "$REF" == refs/heads/staging ]]; then
-            TAG="staging"
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            TAG=${GITHUB_REF#refs/tags/}
+          elif [[ "${GITHUB_REF}" == refs/heads/main" ]]; then
+            TAG=${{ steps.version.outputs.VERSION }}
+          elif [[ "${GITHUB_REF}" == refs/heads/dev ]]; then
+            TAG=dev
+          elif [[ "${GITHUB_REF}" == refs/heads/staging ]]; then
+            TAG=staging
           else
-            TAG=$(echo "${REF#refs/heads/}" | tr '/' '-')
+            TAG=$(echo "${GITHUB_REF#refs/heads/}" | tr '/' '-')
           fi
           echo "TAG=$TAG" >> $GITHUB_OUTPUT
           echo "IMAGE=$IMAGE" >> $GITHUB_OUTPUT
