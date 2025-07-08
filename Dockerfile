@@ -2,14 +2,14 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
+# Copy project file and restore dependencies
 COPY *.csproj ./
 RUN dotnet restore
 
+# Copy the entire source (including version files)
 COPY . ./
 
-# ✅ Copy version.json explicitly so it's available in final image
-COPY version.json ./version.json
-
+# ✅ Ensure version.json is copied to output
 RUN dotnet publish -c Release -o /app/out
 
 # ----------- Runtime Stage -----------
@@ -19,23 +19,25 @@ WORKDIR /app
 LABEL maintainer="you@yourcompany.com"
 LABEL org.opencontainers.image.source="https://github.com/yourrepo/MetricsApi"
 
-# ✅ Copy app output including version.json from build stage
+# ✅ Copy published output from build stage
 COPY --from=build /app/out ./
 
-# ✅ Copy version.json from source stage too
+# ✅ Explicitly copy version.json if needed separately
 COPY --from=build /src/version.json ./version.json
 
+# Create and use non-root user
 RUN adduser --disabled-password appuser
 USER appuser
 
-# Expose HTTP
+# Expose HTTP port
 EXPOSE 80
 
-# ✅ Ensure .NET listens on port 80 inside container
+# ✅ Ensure .NET uses port 80
 ENV ASPNETCORE_URLS=http://+:80
 
-# Healthcheck for orchestrators
+# ✅ Healthcheck for orchestrators
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s \
   CMD curl --fail http://localhost/health/status || exit 1
 
+# ✅ Run the app
 ENTRYPOINT ["dotnet", "MetricsApi.dll"]
