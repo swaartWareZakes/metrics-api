@@ -1,22 +1,66 @@
-name: Build and Push docker image
+name: Build and Push Docker Image
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - dev
+      - staging
+    tags:
+      - 'v*'
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repo 
-      uses: actions/checkout@v3
+      - name: Checkout repo
+        uses: actions/checkout@v3
 
-    - name: Log in to Docker hub
-      run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+      # 🔁 Copy correct version file per branch
+      - name: Use environment-specific version.json
+        run: |
+          if [[ "${GITHUB_REF}" == "refs/heads/dev" ]]; then
+            cp version.dev.json version.json
+          elif [[ "${GITHUB_REF}" == "refs/heads/staging" ]]; then
+            cp version.staging.json version.json
+          else
+            echo "Using default version.json"
+          fi
 
-    - name: Build Docker image
-      run: docker build -t ${{ secrets.DOCKER_REPO }} .
+      # 📖 Read version and environment values
+      - name: Read version and environment from version.json
+        id: version
+        run: |
+          VERSION=$(jq -r .version version.json)
+          ENVIRONMENT=$(jq -r .environment version.json)
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "ENVIRONMENT=$ENVIRONMENT" >> $GITHUB_OUTPUT
 
-    - name: Push Docker image 
-      run: docker push ${{ secrets.DOCKER_REPO }}
+      # 🏷️ Setup image tag
+      - name: Set up Docker tag
+        id: meta
+        run: |
+          IMAGE=swaartwarezakes/metrics-api
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            TAG=${GITHUB_REF#refs/tags/}
+          elif [[ "${GITHUB_REF}" == refs/heads/main" ]]; then
+            TAG=${{ steps.version.outputs.VERSION }}
+          elif [[ "${GITHUB_REF}" == refs/heads/dev ]]; then
+            TAG=dev
+          elif [[ "${GITHUB_REF}" == refs/heads/staging ]]; then
+            TAG=staging
+          else
+            TAG=$(echo "${GITHUB_REF#refs/heads/}" | tr '/' '-')
+          fi
+          echo "TAG=$TAG" >> $GITHUB_OUTPUT
+          echo "IMAGE=$IMAGE" >> $GITHUB_OUTPUT
+
+      - name: Log in to Docker Hub
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+      - name: Build Docker image
+        run: docker build -t ${{ steps.meta.outputs.IMAGE }}:${{ steps.meta.outputs.TAG }} .
+
+      - name: Push Docker image
+        run: docker push ${{ steps.meta.outputs.IMAGE }}:${{ steps.meta.outputs.TAG }}

@@ -13,7 +13,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-Console.WriteLine("🚀 Hello from GitHub Actions!");
+Console.WriteLine("🚀 Hello from GitHub Actions! For Staging");
 
 
 // app.UseHttpsRedirection();
