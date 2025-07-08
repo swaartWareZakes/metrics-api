@@ -6,6 +6,10 @@ COPY *.csproj ./
 RUN dotnet restore
 
 COPY . ./
+
+# ✅ Copy version.json explicitly so it's available in final image
+COPY version.json ./version.json
+
 RUN dotnet publish -c Release -o /app/out
 
 # ----------- Runtime Stage -----------
@@ -15,8 +19,11 @@ WORKDIR /app
 LABEL maintainer="you@yourcompany.com"
 LABEL org.opencontainers.image.source="https://github.com/yourrepo/MetricsApi"
 
-# ✅ Fix: Copy from the build stage, not a non-existent "build" image
+# ✅ Copy app output including version.json from build stage
 COPY --from=build /app/out ./
+
+# ✅ Copy version.json from source stage too
+COPY --from=build /src/version.json ./version.json
 
 RUN adduser --disabled-password appuser
 USER appuser
